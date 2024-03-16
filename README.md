@@ -1,4 +1,4 @@
-# Spotify du pauvre - ICE Project
+# SpOtify dU Pauvre (SOUP) - ICE Project
 
 ## Installation 
 
@@ -31,6 +31,22 @@ python3 Server.py
 
 ```bash
 cd client
-slice2js Hello.ice --output-dir generated
+slice2js SOUP.ice --output-dir generated
 node Client.js
+```
+
+## Informations
+### Structure BDD
+
+```
+    {
+        'filename': filename,
+        'metadata': {
+            'title': title,
+            'artist': artist
+            'genre': genre,
+            'album': album,
+        },
+        'data': data
+    }
 ```

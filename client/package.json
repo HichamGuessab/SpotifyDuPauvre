@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "convert-string": "^0.1.0",
     "ice": "^3.7.100",
     "slice2js": "^3.7.100"
   },
