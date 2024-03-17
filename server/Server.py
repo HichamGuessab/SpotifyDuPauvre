@@ -32,36 +32,49 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.streaming_url = "http://localhost:8080/stream"
 
     def addMusic(self, filename, title, artist, album, genre, data, current):
-        self.collection.insert_one(
-            {
-                "filename": filename,
-                "metadata": {
-                    "title": title,
-                    "artist": artist,
-                    "album": album,
-                    "genre": genre
-                },
-                "data": data
-            }
-        )
-        print("The song " + title + " from " + artist + " has been added.")
+        if self.collection.find_one({"metadata.title": title, "metadata.artist": artist}):
+            response = "The song " + title + " from " + artist + " already exists."
+        else:
+            self.collection.insert_one(
+                {
+                    "filename": filename,
+                    "metadata": {
+                        "title": title,
+                        "artist": artist,
+                        "album": album,
+                        "genre": genre
+                    },
+                    "data": data
+                }
+            )
+            response = "The song " + title + " from " + artist + " has been added."
+        return response
+
+    def deleteMusic(self, title, artist, current):
+        response = "nothing"
+        if not self.collection.find_one({"metadata.title": title, "metadata.artist": artist}):
+            response = "The song " + title + " from " + artist + " doesn't exists."
+        else:
+            self.collection.delete_one({"metadata.title": title, "metadata.artist": artist})
+            response = "The song " + title + " from " + artist + " has been deleted."
+        return response
 
     def playMusic(self, title, artist, current):
         song_data = self.collection.find_one({"metadata.title": title, "metadata.artist": artist}).get("data")
         if not song_data:
-            return ""
+            response = "The song " + title + " from " + artist + " does not exist."
+        else:
+            temp_filename = os.path.join("assets", f"{title}.mp3")
+            with open(temp_filename, "wb") as f:
+                f.write(song_data)
 
-        temp_filename = os.path.join("assets", f"{title}.mp3")
-        with open(temp_filename, "wb") as f:
-            f.write(song_data)
+            output = 'sout=#transcode{vcodec=none,acodec=mp3,ab=128,channels=2,samplerate=44100}:http{mux=raw,dst=:8080/stream.mp3}'
+            media = self.vlc_instance.media_new(temp_filename, output)
 
-        output = 'sout=#transcode{vcodec=none,acodec=mp3,ab=128,channels=2,samplerate=44100}:http{mux=raw,dst=:8080/stream.mp3}'
-        media = self.vlc_instance.media_new(temp_filename, output)
-
-        self.player.set_media(media)
-        self.player.play()
-
-        return self.streaming_url
+            self.player.set_media(media)
+            self.player.play()
+            response = "The song " + title + " from " + artist + " is playing on " + self.streaming_url
+        return response
 
 
 if __name__ == '__main__':

@@ -6,22 +6,23 @@ const converter = require("convert-string");
 async function helloWorld(twoway) {
     console.log("Calling helloWorld...");
     twoway.helloWorld();
-    console.log("helloWorld called.");
 }
 
 async function addMusic(filename, title, artist, album, genre, twoway) {
     console.log("Adding music...");
     const filePath = `./assets/${filename}`;
     let data = fs.readFileSync(filePath);
-    await twoway.addMusic(filename, title, artist, album, genre, data);
-    console.log("Music added.");
+    console.log(await twoway.addMusic(filename, title, artist, album, genre, data));
+}
+
+async function deleteMusic(title, artist, twoway) {
+    console.log("Deleting music...");
+    console.log(await twoway.deleteMusic(title, artist));
 }
 
 async function playMusic(title, artist, twoway) {
     console.log("Playing music...");
-    const streamingUrl = await twoway.playMusic(title, artist);
-    console.log("Streaming URL: " + streamingUrl);
-    console.log("Music played.");
+    console.log(await twoway.playMusic(title, artist));
 }
 
 async function main() {
@@ -50,9 +51,10 @@ async function main() {
             throw new Error("Invalid proxy");
         }
 
-        // await helloWorld(twoway1);
+        await helloWorld(twoway1);
         // await addMusic("Merveille_Citadelle.mp3", "Citadelle", "Merveille", "Citadelle", "Pop", twoway2);
-        await playMusic("Citadelle", "Merveille", twoway2);
+        // await deleteMusic("Citadelle", "Merveille", twoway2);
+        // await playMusic("Citadelle", "Merveille", twoway2);
         communicator.destroy();
     } catch (err) {
         console.error(err.toString());
