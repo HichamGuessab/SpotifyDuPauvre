@@ -1,12 +1,10 @@
 import Ice
 import sys
 
-# Importation du module
 Ice.loadSlice('SOUP.ice')
 import SOUP
 import vlc
 import os
-import time
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -51,12 +49,30 @@ class SoupI(SOUP.SpotifyDuPauvre):
         return response
 
     def deleteMusic(self, title, artist, current):
-        response = "nothing"
         if not self.collection.find_one({"metadata.title": title, "metadata.artist": artist}):
             response = "The song " + title + " from " + artist + " doesn't exists."
         else:
             self.collection.delete_one({"metadata.title": title, "metadata.artist": artist})
             response = "The song " + title + " from " + artist + " has been deleted."
+        return response
+
+    def editMusic(self, title, artist, newTitle, newAlbum, newGenre, current):
+        song = self.collection.find_one({"metadata.title": title, "metadata.artist": artist})
+        if not song:
+            response = "The song " + title + " from " + artist + " does not exist."
+        else:
+            self.collection.update_one(
+                {"metadata.title": title, "metadata.artist": artist},
+                {
+                    "$set": {
+                        "filename": artist + "_" + newTitle,
+                        "metadata.title": newTitle,
+                        "metadata.album": newAlbum,
+                        "metadata.genre": newGenre
+                    }
+                }
+            )
+            response = "The song " + title + " from " + artist + " has been updated : " + newTitle + " from album " + newAlbum + " in " + newGenre + " genre."
         return response
 
     def playMusic(self, title, artist, current):

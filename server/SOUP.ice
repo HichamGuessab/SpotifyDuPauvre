@@ -10,6 +10,8 @@ module SOUP
     interface SpotifyDuPauvre {
         string addMusic(string filename, string title, string artist, string album, string genre, ByteSeq data);
         string deleteMusic(string title, string artist);
+        string editMusic(string title, string artist, string newTitle, string newAlbum, string newGenre);
+
         string playMusic(string title, string artist);
         string pauseMusic();
         string resumeMusic();

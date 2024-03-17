@@ -20,6 +20,11 @@ async function deleteMusic(title, artist, twoway) {
     console.log(await twoway.deleteMusic(title, artist));
 }
 
+async function editMusic(oldTitle, artist, newTitle, newAlbum, newGenre, twoway) {
+    console.log("Editing music...");
+    console.log(await twoway.editMusic(oldTitle, artist, newTitle, newAlbum, newGenre));
+}
+
 async function playMusic(title, artist, twoway) {
     console.log("Playing music...");
     console.log(await twoway.playMusic(title, artist));
@@ -72,7 +77,9 @@ async function main() {
         // await playMusic("Citadelle", "Merveille", twoway2);
         // await stopMusic(twoway2);
         // await pauseMusic(twoway2);
-        await resumeMusic(twoway2);
+        // await resumeMusic(twoway2);
+        await editMusic("Citadelle", "Merveille", "CitadelleBis", "CitadelleBis", "Rap", twoway2);
+        // await editMusic("CitadelleBis", "Merveille", "Citadelle", "Citadelle", "Pop", twoway2);
 
         communicator.destroy();
     } catch (err) {
