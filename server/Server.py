@@ -6,6 +6,7 @@ Ice.loadSlice('SOUP.ice')
 import SOUP
 import vlc
 import os
+import time
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -26,6 +27,9 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.client = MongoClient(MONGO_URI)
         self.db = self.client[DATABASE]
         self.collection = self.db[COLLECTION]
+        self.vlc_instance = vlc.Instance("--no-audio")
+        self.player = self.vlc_instance.media_player_new()
+        self.streaming_url = "http://localhost:8080/stream"
 
     def addMusic(self, filename, title, artist, album, genre, data, current):
         self.collection.insert_one(
@@ -42,6 +46,23 @@ class SoupI(SOUP.SpotifyDuPauvre):
         )
         print("The song " + title + " from " + artist + " has been added.")
 
+    def playMusic(self, title, artist, current):
+        song_data = self.collection.find_one({"metadata.title": title, "metadata.artist": artist}).get("data")
+        if not song_data:
+            return ""
+
+        temp_filename = os.path.join("assets", f"{title}.mp3")
+        with open(temp_filename, "wb") as f:
+            f.write(song_data)
+
+        output = 'sout=#transcode{vcodec=none,acodec=mp3,ab=128,channels=2,samplerate=44100}:http{mux=raw,dst=:8080/stream.mp3}'
+        media = self.vlc_instance.media_new(temp_filename, output)
+
+        self.player.set_media(media)
+        self.player.play()
+
+        return self.streaming_url
+
 
 if __name__ == '__main__':
     properties = Ice.createProperties()
@@ -55,12 +76,13 @@ if __name__ == '__main__':
         # Création d'un objet de type "ObjectAdapter" avec pour nom "HelloAdapter" et pour endpoint "default -h localhost -p 10000"
         adapter = communicator.createObjectAdapterWithEndpoints("SOUP", "default -h localhost -p 10000")
 
-        soup = SoupI()
         hello = HelloI()
+        soup = SoupI()
 
         # Ajout de l'objet "soup" à l'adapter
-        adapter.add(soup, communicator.stringToIdentity("soup"))
         adapter.add(hello, communicator.stringToIdentity("hello"))
+        adapter.add(soup, communicator.stringToIdentity("soup"))
+
         adapter.activate()
         print("Server is ready to accept requests.")
 

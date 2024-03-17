@@ -17,6 +17,13 @@ async function addMusic(filename, title, artist, album, genre, twoway) {
     console.log("Music added.");
 }
 
+async function playMusic(title, artist, twoway) {
+    console.log("Playing music...");
+    const streamingUrl = await twoway.playMusic(title, artist);
+    console.log("Streaming URL: " + streamingUrl);
+    console.log("Music played.");
+}
+
 async function main() {
     try {
         // --------- ICE configuration ---------
@@ -35,17 +42,17 @@ async function main() {
         const proxyHello = communicator.stringToProxy("hello:default -p 10000").ice_twoway().ice_secure(false);
 
         // Cast des proxys en interfaces
-        const twoway1 = await SOUP.SpotifyDuPauvrePrx.checkedCast(proxySpotifyDuPauvre);
-        const twoway2 = await SOUP.HelloPrx.checkedCast(proxyHello);
+        const twoway1 = await SOUP.HelloPrx.checkedCast(proxyHello);
+        const twoway2 = await SOUP.SpotifyDuPauvrePrx.checkedCast(proxySpotifyDuPauvre);
 
         // Si le cast échoue, on lève une exception
         if (!twoway1 && !twoway2) {
             throw new Error("Invalid proxy");
         }
 
-        await helloWorld(twoway2);
-        await addMusic("Merveille_Citadelle.mp3", "Citadelle", "Merveille", "Citadelle", "Pop", twoway1);
-
+        // await helloWorld(twoway1);
+        // await addMusic("Merveille_Citadelle.mp3", "Citadelle", "Merveille", "Citadelle", "Pop", twoway2);
+        await playMusic("Citadelle", "Merveille", twoway2);
         communicator.destroy();
     } catch (err) {
         console.error(err.toString());
