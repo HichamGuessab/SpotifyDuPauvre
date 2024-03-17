@@ -66,6 +66,9 @@ class SoupI(SOUP.SpotifyDuPauvre):
         if not song_data:
             response = "The song " + title + " from " + artist + " does not exist."
         else:
+            if self.player.is_playing():
+                self.player.stop()
+
             temp_filename = os.path.join("assets", f"{song_filename}.mp3")
             with open(temp_filename, "wb") as f:
                 f.write(song_data)
