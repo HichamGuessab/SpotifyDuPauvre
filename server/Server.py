@@ -79,6 +79,11 @@ class SoupI(SOUP.SpotifyDuPauvre):
             response = "The song " + title + " from " + artist + " is playing on " + self.streaming_url
         return response
 
+    def stopMusic(self, current):
+        self.player.stop()
+        self.vlc_instance.release()
+        return "The song has been stopped."
+
 
 if __name__ == '__main__':
     properties = Ice.createProperties()

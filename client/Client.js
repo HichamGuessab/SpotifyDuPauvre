@@ -25,6 +25,11 @@ async function playMusic(title, artist, twoway) {
     console.log(await twoway.playMusic(title, artist));
 }
 
+async function stopMusic(twoway) {
+    console.log("Stopping music...");
+    console.log(await twoway.stopMusic());
+}
+
 async function main() {
     try {
         // --------- ICE configuration ---------
@@ -54,7 +59,9 @@ async function main() {
         // await helloWorld(twoway1);
         // await addMusic("Merveille_Citadelle", "Citadelle", "Merveille", "Citadelle", "Pop", twoway2);
         // await deleteMusic("Citadelle", "Merveille", twoway2);
-        await playMusic("Citadelle", "Merveille", twoway2);
+        // await playMusic("Citadelle", "Merveille", twoway2);
+        await stopMusic(twoway2);
+
         communicator.destroy();
     } catch (err) {
         console.error(err.toString());
