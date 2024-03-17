@@ -60,11 +60,13 @@ class SoupI(SOUP.SpotifyDuPauvre):
         return response
 
     def playMusic(self, title, artist, current):
-        song_data = self.collection.find_one({"metadata.title": title, "metadata.artist": artist}).get("data")
+        song = self.collection.find_one({"metadata.title": title, "metadata.artist": artist})
+        song_filename = song.get("filename")
+        song_data = song.get("data")
         if not song_data:
             response = "The song " + title + " from " + artist + " does not exist."
         else:
-            temp_filename = os.path.join("assets", f"{title}.mp3")
+            temp_filename = os.path.join("assets", f"{song_filename}.mp3")
             with open(temp_filename, "wb") as f:
                 f.write(song_data)
 
@@ -73,6 +75,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
 
             self.player.set_media(media)
             self.player.play()
+
             response = "The song " + title + " from " + artist + " is playing on " + self.streaming_url
         return response
 
