@@ -1,18 +1,46 @@
 const Ice = require("ice").Ice;
 const SOUP = require("./generated/SOUP").SOUP;
 const fs = require("fs");
-const converter = require("convert-string");
+const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 async function helloWorld(twoway) {
     console.log("Calling helloWorld...");
     twoway.helloWorld();
 }
 
+async function researchMusic(title, twoway) {
+    console.log("Researching music...");
+    const responses = await twoway.researchMusic(title);
+    let i = 0;
+    for (const res in responses) {
+        console.log(`${i}. Title: ${responses[res].title} | Artist: ${responses[res].artist}`);
+        i++;
+    }
+    readline.question('Enter the number of the song you want to play (or \'q\' to exit): ', async songNumber => {
+        if (songNumber === 'q') {
+            readline.close();
+            return;
+        } else if (songNumber < 0 || songNumber >= responses.length) {
+            console.log("Invalid number");
+            readline.close();
+            return;
+        } else {
+            await playMusic(responses[songNumber].title, responses[songNumber].artist, twoway);
+            readline.close();
+            return;
+        }
+        readline.close();
+    });
+}
+
 async function addMusic(filename, title, artist, album, genre, twoway) {
     console.log("Adding music...");
     const filePath = `./assets/${filename}.mp3`;
     let data = fs.readFileSync(filePath);
-    console.log(await twoway.addMusic(filename, title, artist, album, genre, data));
+    console.log(await twoway.addMusic(title, artist, album, genre, data));
 }
 
 async function deleteMusic(title, artist, twoway) {
@@ -72,16 +100,21 @@ async function main() {
         }
 
         // await helloWorld(twoway1);
-        // await addMusic("Merveille_Citadelle", "Citadelle", "Merveille", "Citadelle", "Pop", twoway2);
+        // await addMusic("Merveille_Citadelle","CitadelleEncore2", "Merveille2", "CitadelleEncore2", "Pop", twoway2);
         // await deleteMusic("Citadelle", "Merveille", twoway2);
         // await playMusic("Citadelle", "Merveille", twoway2);
         // await stopMusic(twoway2);
         // await pauseMusic(twoway2);
         // await resumeMusic(twoway2);
-        await editMusic("Citadelle", "Merveille", "CitadelleBis", "CitadelleBis", "Rap", twoway2);
+        // await editMusic("Citadelle", "Merveille", "CitadelleBis", "CitadelleBis", "Rap", twoway2);
         // await editMusic("CitadelleBis", "Merveille", "Citadelle", "Citadelle", "Pop", twoway2);
+        await researchMusic("Citadelle", twoway2);
 
-        communicator.destroy();
+        process.on('SIGINT', function() {
+            console.log("Exiting...");
+            communicator.destroy();
+            process.exit();
+        });
     } catch (err) {
         console.error(err.toString());
         process.exitCode = 1;

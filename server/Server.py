@@ -5,6 +5,7 @@ Ice.loadSlice('SOUP.ice')
 import SOUP
 import vlc
 import os
+import re
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -29,13 +30,32 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.player = self.vlc_instance.media_player_new()
         self.streaming_url = "http://localhost:8080/stream"
 
-    def addMusic(self, filename, title, artist, album, genre, data, current):
+    def researchMusic(self, title, current):
+        regex = re.compile(title, re.IGNORECASE)
+        metadata = [
+            {
+                "title": song["metadata"]["title"],
+                "artist": song["metadata"]["artist"],
+                "album": song["metadata"]["album"],
+                "genre": song["metadata"]["genre"]
+            }
+            for song in self.collection.find(
+                {"metadata.title": {"$regex": regex}}
+            ) if "metadata" in song
+                 and "title" in song["metadata"]
+                 and "artist" in song["metadata"]
+                 and "album" in song["metadata"]
+                 and "genre" in song["metadata"]
+        ]
+        return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
+
+    def addMusic(self, title, artist, album, genre, data, current):
         if self.collection.find_one({"metadata.title": title, "metadata.artist": artist}):
             response = "The song " + title + " from " + artist + " already exists."
         else:
             self.collection.insert_one(
                 {
-                    "filename": filename,
+                    "filename": artist + "_" + title,
                     "metadata": {
                         "title": title,
                         "artist": artist,
@@ -110,6 +130,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.player.stop()
         self.vlc_instance.release()
         return "The song has been stopped."
+
 
 if __name__ == '__main__':
     properties = Ice.createProperties()
