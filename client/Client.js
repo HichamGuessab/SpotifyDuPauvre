@@ -12,7 +12,7 @@ async function helloWorld(twoway) {
 }
 
 async function researchMusicByTitle(title, twoway) {
-    console.log("Researching music...");
+    console.log("Researching music by title...");
     const responses = await twoway.researchMusicByTitle(title);
     let i = 0;
     for (const res in responses) {
@@ -22,17 +22,34 @@ async function researchMusicByTitle(title, twoway) {
     readline.question('Enter the number of the song you want to play (or \'q\' to exit): ', async songNumber => {
         if (songNumber === 'q') {
             readline.close();
-            return;
         } else if (songNumber < 0 || songNumber >= responses.length) {
             console.log("Invalid number");
             readline.close();
-            return;
         } else {
             await playMusic(responses[songNumber].title, responses[songNumber].artist, twoway);
             readline.close();
-            return;
         }
-        readline.close();
+    });
+}
+
+async function researchMusicByArtist(artist, twoway) {
+    console.log("Researching music by artist...");
+    const responses = await twoway.researchMusicByArtist(artist);
+    let i = 0;
+    for (const res in responses) {
+        console.log(`${i}. Title: ${responses[res].title} | Artist: ${responses[res].artist}`);
+        i++;
+    }
+    readline.question('Enter the number of the song you want to play (or \'q\' to exit): ', async songNumber => {
+        if (songNumber === 'q') {
+            readline.close();
+        } else if (songNumber < 0 || songNumber >= responses.length) {
+            console.log("Invalid number");
+            readline.close();
+        } else {
+            await playMusic(responses[songNumber].title, responses[songNumber].artist, twoway);
+            readline.close();
+        }
     });
 }
 
@@ -108,7 +125,8 @@ async function main() {
         // await resumeMusic(twoway2);
         // await editMusic("Citadelle", "Merveille", "CitadelleBis", "CitadelleBis", "Rap", twoway2);
         // await editMusic("CitadelleBis", "Merveille", "Citadelle", "Citadelle", "Pop", twoway2);
-        await researchMusicByTitle("Citadelle", twoway2);
+        // await researchMusicByTitle("Citadelle", twoway2);
+        await researchMusicByArtist("Merveille2", twoway2);
 
         process.on('SIGINT', function() {
             console.log("Exiting...");

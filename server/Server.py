@@ -49,6 +49,25 @@ class SoupI(SOUP.SpotifyDuPauvre):
         ]
         return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
 
+    def researchMusicByArtist(self, artist, current):
+        regex = re.compile(artist, re.IGNORECASE)
+        metadata = [
+            {
+                "title": song["metadata"]["title"],
+                "artist": song["metadata"]["artist"],
+                "album": song["metadata"]["album"],
+                "genre": song["metadata"]["genre"]
+            }
+            for song in self.collection.find(
+                {"metadata.artist": {"$regex": regex}}
+            ) if "metadata" in song
+                 and "title" in song["metadata"]
+                 and "artist" in song["metadata"]
+                 and "album" in song["metadata"]
+                 and "genre" in song["metadata"]
+        ]
+        return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
+
     def addMusic(self, title, artist, album, genre, data, current):
         if self.collection.find_one({"metadata.title": title, "metadata.artist": artist}):
             response = "The song " + title + " from " + artist + " already exists."

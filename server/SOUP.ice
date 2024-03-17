@@ -15,6 +15,7 @@ module SOUP
 
     interface SpotifyDuPauvre {
         ObjectArray researchMusicByTitle(string title);
+        ObjectArray researchMusicByArtist(string artist);
 
         string addMusic(string title, string artist, string album, string genre, ByteSeq data);
         string deleteMusic(string title, string artist);
