@@ -30,7 +30,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.player = self.vlc_instance.media_player_new()
         self.streaming_url = "http://localhost:8080/stream"
 
-    def researchMusic(self, title, current):
+    def researchMusicByTitle(self, title, current):
         regex = re.compile(title, re.IGNORECASE)
         metadata = [
             {

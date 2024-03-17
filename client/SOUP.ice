@@ -14,7 +14,7 @@ module SOUP
     sequence<MetaData> ObjectArray;
 
     interface SpotifyDuPauvre {
-        ObjectArray researchMusic(string title);
+        ObjectArray researchMusicByTitle(string title);
 
         string addMusic(string title, string artist, string album, string genre, ByteSeq data);
         string deleteMusic(string title, string artist);

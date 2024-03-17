@@ -11,9 +11,9 @@ async function helloWorld(twoway) {
     twoway.helloWorld();
 }
 
-async function researchMusic(title, twoway) {
+async function researchMusicByTitle(title, twoway) {
     console.log("Researching music...");
-    const responses = await twoway.researchMusic(title);
+    const responses = await twoway.researchMusicByTitle(title);
     let i = 0;
     for (const res in responses) {
         console.log(`${i}. Title: ${responses[res].title} | Artist: ${responses[res].artist}`);
@@ -108,7 +108,7 @@ async function main() {
         // await resumeMusic(twoway2);
         // await editMusic("Citadelle", "Merveille", "CitadelleBis", "CitadelleBis", "Rap", twoway2);
         // await editMusic("CitadelleBis", "Merveille", "Citadelle", "Citadelle", "Pop", twoway2);
-        await researchMusic("Citadelle", twoway2);
+        await researchMusicByTitle("Citadelle", twoway2);
 
         process.on('SIGINT', function() {
             console.log("Exiting...");
