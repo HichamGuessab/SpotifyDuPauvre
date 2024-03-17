@@ -6,6 +6,122 @@ const readline = require('readline').createInterface({
     output: process.stdout
 });
 
+async function displayMenu() {
+    console.log("\n*** Spotify Du Pauvre ***");
+    console.log("1. Add Music");
+    console.log("2. Delete Music");
+    console.log("3. Edit Music");
+    console.log("--------------");
+    console.log("4. Play Music");
+    console.log("5. Pause Music");
+    console.log("6. Resume Music");
+    console.log("7. Stop Music");
+    console.log("--------------");
+    console.log("8. Research Music");
+    console.log("0. Exit");
+}
+
+async function handleUserInput(twoway) {
+    readline.question('Enter your choice: ', async choice => {
+        switch (choice) {
+            case '1':
+                await addMusicMenu(twoway);
+                break;
+            case '2':
+                await deleteMusicMenu(twoway);
+                break;
+            case '3':
+                await editMusicMenu(twoway);
+                break;
+            case '4':
+                await playMusicMenu(twoway);
+                break;
+            case '5':
+                await pauseMusic(twoway);
+                break;
+            case '6':
+                await resumeMusic(twoway);
+                break;
+            case '7':
+                await stopMusic(twoway);
+                break;
+            case '8':
+                await researchMusicMenu(twoway);
+                break;
+            case '0':
+                console.log("Exiting...");
+                communicator.destroy();
+                process.exit();
+                break;
+            default:
+                console.log("Invalid choice. Please enter a number from the menu.");
+        }
+    });
+}
+
+async function addMusicMenu(twoway) {
+    readline.question('Enter filename, title, artist, album, genre (separated by commas): ', async input => {
+        const [filename, title, artist, album, genre] = input.split(",").map(item => item.trim());
+        await addMusic(filename, title, artist, album, genre, twoway);
+        await displayMenu();
+        await handleUserInput(twoway);
+    });
+}
+
+async function deleteMusicMenu(twoway) {
+    readline.question('Enter title and artist (separated by comma): ', async input => {
+        const [title, artist] = input.split(",").map(item => item.trim());
+        console.log(await twoway.deleteMusic(title, artist));
+        await displayMenu();
+        await handleUserInput(twoway);
+    });
+}
+
+async function editMusicMenu(twoway) {
+    readline.question('Enter old title, artist, new title, album, genre (separated by commas): ', async input => {
+        const [oldTitle, artist, newTitle, album, genre] = input.split(",").map(item => item.trim());
+        console.log(await twoway.editMusic(oldTitle, artist, newTitle, album, genre));
+        await displayMenu();
+        await handleUserInput(twoway);
+    });
+}
+
+async function playMusicMenu(twoway) {
+    readline.question('Enter title and artist: ', async input => {
+        const [title, artist] = input.split(",").map(item => item.trim());
+        console.log(await twoway.playMusic(title, artist));
+        await displayMenu();
+        await handleUserInput(twoway);
+    });
+}
+
+async function researchMusicMenu(twoway) {
+    readline.question('Search by \n 0.Title \n 1.Artist \n Enter your choice: ', async choice => {
+        switch (choice) {
+            case '0':
+                await researchMusicByTitleMenu(twoway);
+                break;
+            case '1':
+                await researchMusicByArtistMenu(twoway);
+                break;
+            default:
+                console.log("Invalid choice. Please enter either '0' or '1'.");
+        }
+    });
+}
+
+async function researchMusicByTitleMenu(twoway) {
+    readline.question('Enter title: ', async title => {
+        await researchMusicByTitle(title, twoway);
+    });
+}
+
+async function researchMusicByArtistMenu(twoway) {
+    readline.question('Enter artist: ', async artist => {
+        await researchMusicByArtist(artist, twoway);
+    });
+}
+
 async function helloWorld(twoway) {
     console.log("Calling helloWorld...");
     twoway.helloWorld();
@@ -21,13 +137,12 @@ async function researchMusicByTitle(title, twoway) {
     }
     readline.question('Enter the number of the song you want to play (or \'q\' to exit): ', async songNumber => {
         if (songNumber === 'q') {
-            readline.close();
+            await displayMenu();
+            await handleUserInput(twoway);
         } else if (songNumber < 0 || songNumber >= responses.length) {
             console.log("Invalid number");
-            readline.close();
         } else {
             await playMusic(responses[songNumber].title, responses[songNumber].artist, twoway);
-            readline.close();
         }
     });
 }
@@ -42,13 +157,12 @@ async function researchMusicByArtist(artist, twoway) {
     }
     readline.question('Enter the number of the song you want to play (or \'q\' to exit): ', async songNumber => {
         if (songNumber === 'q') {
-            readline.close();
+            await displayMenu();
+            await handleUserInput(twoway);
         } else if (songNumber < 0 || songNumber >= responses.length) {
             console.log("Invalid number");
-            readline.close();
         } else {
             await playMusic(responses[songNumber].title, responses[songNumber].artist, twoway);
-            readline.close();
         }
     });
 }
@@ -60,11 +174,6 @@ async function addMusic(filename, title, artist, album, genre, twoway) {
     console.log(await twoway.addMusic(title, artist, album, genre, data));
 }
 
-async function deleteMusic(title, artist, twoway) {
-    console.log("Deleting music...");
-    console.log(await twoway.deleteMusic(title, artist));
-}
-
 async function editMusic(oldTitle, artist, newTitle, newAlbum, newGenre, twoway) {
     console.log("Editing music...");
     console.log(await twoway.editMusic(oldTitle, artist, newTitle, newAlbum, newGenre));
@@ -73,21 +182,29 @@ async function editMusic(oldTitle, artist, newTitle, newAlbum, newGenre, twoway)
 async function playMusic(title, artist, twoway) {
     console.log("Playing music...");
     console.log(await twoway.playMusic(title, artist));
+    await displayMenu();
+    await handleUserInput(twoway);
 }
 
 async function pauseMusic(twoway) {
     console.log("Pausing music...");
     console.log(await twoway.pauseMusic());
+    await displayMenu();
+    await handleUserInput(twoway);
 }
 
 async function resumeMusic(twoway) {
     console.log("Resuming music...");
     console.log(await twoway.resumeMusic());
+    await displayMenu();
+    await handleUserInput(twoway);
 }
 
 async function stopMusic(twoway) {
     console.log("Stopping music...");
     console.log(await twoway.stopMusic());
+    await displayMenu();
+    await handleUserInput(twoway);
 }
 
 async function main() {
@@ -116,17 +233,9 @@ async function main() {
             throw new Error("Invalid proxy");
         }
 
-        // await helloWorld(twoway1);
-        // await addMusic("Merveille_Citadelle","CitadelleEncore2", "Merveille2", "CitadelleEncore2", "Pop", twoway2);
-        // await deleteMusic("Citadelle", "Merveille", twoway2);
-        // await playMusic("Citadelle", "Merveille", twoway2);
-        // await stopMusic(twoway2);
-        // await pauseMusic(twoway2);
-        // await resumeMusic(twoway2);
-        // await editMusic("Citadelle", "Merveille", "CitadelleBis", "CitadelleBis", "Rap", twoway2);
-        // await editMusic("CitadelleBis", "Merveille", "Citadelle", "Citadelle", "Pop", twoway2);
-        // await researchMusicByTitle("Citadelle", twoway2);
-        await researchMusicByArtist("Merveille2", twoway2);
+        // Affichage du menu et gestion des choix de l'utilisateur
+        await displayMenu();
+        await handleUserInput(twoway2);
 
         process.on('SIGINT', function() {
             console.log("Exiting...");
