@@ -28,7 +28,11 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.collection = self.db[COLLECTION]
         self.vlc_instance = vlc.Instance("--no-audio")
         self.player = self.vlc_instance.media_player_new()
-        self.streaming_url = "http://localhost:8080/stream"
+        self.streaming_port = StreamingPortManager.allocate_streaming_port()
+        self.streaming_url = f"http://localhost:{self.streaming_port}/stream"
+
+    def __del__(self):
+        StreamingPortManager.release_streaming_port(self.streaming_port)
 
     def researchMusicByTitle(self, title, current):
         regex = re.compile(title, re.IGNORECASE)
@@ -116,26 +120,31 @@ class SoupI(SOUP.SpotifyDuPauvre):
 
     def playMusic(self, title, artist, current):
         song = self.collection.find_one({"metadata.title": title, "metadata.artist": artist})
+        if not song:
+            return "The song does not exist."
         song_filename = song.get("filename")
         song_data = song.get("data")
         if not song_data:
-            response = "The song " + title + " from " + artist + " does not exist."
-        else:
-            if self.player.is_playing():
-                self.player.stop()
+            return "The song data does not exist."
 
-            temp_filename = os.path.join("assets", f"{song_filename}.mp3")
-            with open(temp_filename, "wb") as f:
-                f.write(song_data)
+        # Créer une nouvelle instance VLC pour chaque requête de client
+        vlc_instance = vlc.Instance("--no-audio")
+        # Allouer un nouveau port pour ce client spécifique
+        streaming_port = StreamingPortManager.allocate_streaming_port()
 
-            output = 'sout=#transcode{vcodec=none,acodec=mp3,ab=128,channels=2,samplerate=44100}:http{mux=raw,dst=:8080/stream.mp3}'
-            media = self.vlc_instance.media_new(temp_filename, output)
+        # Construire le chemin temporaire du fichier
+        temp_filename = os.path.join("assets", f"{song_filename}.mp3")
+        with open(temp_filename, "wb") as f:
+            f.write(song_data)
 
-            self.player.set_media(media)
-            self.player.play()
+        # Configurer le lecteur VLC pour diffuser sur le port alloué
+        output = f'sout=#transcode{{vcodec=none,acodec=mp3,ab=128,channels=2,samplerate=44100}}:http{{mux=raw,dst=:{streaming_port}/stream.mp3}}'
+        media = vlc_instance.media_new(temp_filename, output)
+        self.player.set_media(media)
+        self.player.play()
 
-            response = "The song " + title + " from " + artist + " is playing on " + self.streaming_url
-        return response
+        streaming_url = f"http://localhost:{streaming_port}/stream"
+        return f"The song {title} from {artist} is playing on {streaming_url}"
 
     def pauseMusic(self, current):
         self.player.pause()
@@ -146,9 +155,44 @@ class SoupI(SOUP.SpotifyDuPauvre):
         return "The song has been resumed."
 
     def stopMusic(self, current):
-        self.player.stop()
-        self.vlc_instance.release()
+        if self.player.is_playing():
+            self.player.stop()
+        StreamingPortManager.release_streaming_port(self.streaming_port)
         return "The song has been stopped."
+
+
+class StreamingPortManager:
+    MIN_PORT = 9581
+    MAX_PORT = 9600
+
+    # Initialisation des ensembles de ports disponibles et alloués
+    available_ports = set(range(MIN_PORT, MAX_PORT + 1))
+    allocated_ports = set()
+
+    @staticmethod
+    def allocate_streaming_port():
+        if not StreamingPortManager.available_ports:
+            raise Exception("No available ports for streaming")
+
+        # Sélectionne et retire un port de l'ensemble des ports disponibles
+        port = StreamingPortManager.available_ports.pop()
+
+        # Ajoute le port à l'ensemble des ports alloués
+        StreamingPortManager.allocated_ports.add(port)
+
+        return port
+
+    @staticmethod
+    def release_streaming_port(port):
+        # Assurez-vous que le port était effectivement alloué
+        if port in StreamingPortManager.allocated_ports:
+            # Retire le port de l'ensemble des ports alloués
+            StreamingPortManager.allocated_ports.remove(port)
+
+            # Remet le port dans l'ensemble des ports disponibles
+            StreamingPortManager.available_ports.add(port)
+        else:
+            raise Exception(f"Attempted to release a port ({port}) that was not allocated.")
 
 
 if __name__ == '__main__':
