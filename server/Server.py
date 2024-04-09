@@ -1,4 +1,7 @@
+from time import sleep
+
 import Ice
+import IceStorm
 import sys
 
 Ice.loadSlice('SOUP.ice')
@@ -15,10 +18,11 @@ MONGO_URI = os.getenv('MONGO_URI')
 DATABASE = os.getenv('DATABASE')
 COLLECTION = os.getenv('COLLECTION')
 
+global MONPOTE
+MONPOTE = None
 
 class HelloI(SOUP.Hello):
     def helloWorld(self, current=None):
-        self.notifySubscribers("Someone is HelloWording!")
         print(f"Hello World!")
 
 
@@ -32,11 +36,13 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.streaming_port = StreamingPortManager.allocate_streaming_port()
         self.streaming_url = f"http://localhost:{self.streaming_port}/stream"
         self.subscribers = set()
+        self.libraryUpdate = None
 
     def __del__(self):
         StreamingPortManager.release_streaming_port(self.streaming_port)
 
     def researchMusicByTitle(self, title, current):
+        global MONPOTE
         regex = re.compile(title, re.IGNORECASE)
         metadata = [
             {
@@ -53,10 +59,12 @@ class SoupI(SOUP.SpotifyDuPauvre):
                  and "album" in song["metadata"]
                  and "genre" in song["metadata"]
         ]
-        self.notifySubscribers("Research by title", title)
+        print("C MON POTE", MONPOTE)
+        MONPOTE.libraryUpdated('soup', 'The song has been found.')
         return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
 
     def researchMusicByArtist(self, artist, current):
+        global MONPOTE
         regex = re.compile(artist, re.IGNORECASE)
         metadata = [
             {
@@ -73,6 +81,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
                  and "album" in song["metadata"]
                  and "genre" in song["metadata"]
         ]
+        MONPOTE.libraryUpdated('soup', 'The song has been found.')
         return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
 
     def addMusic(self, title, artist, album, genre, data, current):
@@ -92,7 +101,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
                 }
             )
             response = "The song " + title + " from " + artist + " has been added."
-            self.notifySubscribers("Added song ", title + " by " + artist)
+        MONPOTE.libraryUpdated('soup', response)
         return response
 
     def deleteMusic(self, title, artist, current):
@@ -101,7 +110,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
         else:
             self.collection.delete_one({"metadata.title": title, "metadata.artist": artist})
             response = "The song " + title + " from " + artist + " has been deleted."
-        self.notifySubscribers("Deleted file", title + " by " + artist)
+        MONPOTE.libraryUpdated('soup', response)
         return response
 
     def editMusic(self, title, artist, newTitle, newAlbum, newGenre, current):
@@ -121,7 +130,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
                 }
             )
             response = "The song " + title + " from " + artist + " has been updated : " + newTitle + " from album " + newAlbum + " in " + newGenre + " genre."
-            self.notifySubscribers("Edited file", title + " by " + artist)
+        MONPOTE.libraryUpdated('soup', response)
         return response
 
     def playMusic(self, title, artist, current):
@@ -154,37 +163,22 @@ class SoupI(SOUP.SpotifyDuPauvre):
 
     def pauseMusic(self, current):
         self.player.pause()
-        self.notifySubscribers("Pause", "none")
+        global MONPOTE
+        MONPOTE.libraryUpdated('soup', 'The song has been paused.')
         return "The song has been paused."
 
     def resumeMusic(self, current):
         self.player.play()
+        MONPOTE.libraryUpdated('soup', 'The song has been resumed.')
         return "The song has been resumed."
 
     def stopMusic(self, current):
         if self.player.is_playing():
             self.player.stop()
         StreamingPortManager.release_streaming_port(self.streaming_port)
-        self.notifySubscribers("Add song", self.streaming_url)
+        MONPOTE.libraryUpdated('soup', 'The song has been stopped.')
         return "The song has been stopped."
 
-    def notifySubscribers(self, action, data):
-        for subscriber in self.subscribers:
-            try:
-                print(f"Sending notification: {action} - {data}")
-                subscriber.libraryUpdated(action, data)
-            except Ice.Exception as e:
-                print(f"Erreur lors de la notification de l'abonné : {e}")
-
-    def subscribeUpdates(self, subscriber, current):
-        print("Nouvel abonné")
-        self.subscribers.add(subscriber)
-        print(self.subscribers)
-
-    def unsubscribeUpdates(self, subscriber, current):
-        print("Abonné supprimé")
-        self.subscribers.discard(subscriber)
-        print(self.subscribers)
 
 class StreamingPortManager:
     MIN_PORT = 9581
@@ -229,8 +223,30 @@ if __name__ == '__main__':
     initialization_data.properties = properties
 
     with Ice.initialize(sys.argv, initialization_data) as communicator:
+        topicName = "ping"
+
+        with Ice.initialize(sys.argv, "config.pub") as communicator2:
+            manager = IceStorm.TopicManagerPrx.checkedCast(communicator2.propertyToProxy('TopicManager.Proxy'))
+            if not manager:
+                print("invalid proxy")
+                sys.exit(1)
+
+            try:
+                topic = manager.retrieve(topicName)
+            except IceStorm.NoSuchTopic:
+                try:
+                    topic = manager.create(topicName)
+                except IceStorm.TopicExists:
+                    print("mes couilles au bord de l'eau")
+                    sys.exit(1)
+
+            publisher = topic.getPublisher()
+            MONPOTE = SOUP.LibraryUpdatesPrx.uncheckedCast(publisher)
+
+            MONPOTE.libraryUpdated('soup', 'Library has been updateeeeed.')
+
         # Création d'un objet de type "ObjectAdapter" avec pour nom "HelloAdapter" et pour endpoint "default -h localhost -p 10000"
-        adapter = communicator.createObjectAdapterWithEndpoints("SOUP", "default -h localhost -p 10000")
+        adapter = communicator.createObjectAdapterWithEndpoints("SOUP", "default -h localhost -p 10010")
 
         hello = HelloI()
         soup = SoupI()
@@ -241,5 +257,44 @@ if __name__ == '__main__':
 
         adapter.activate()
         print("Server is ready to accept requests.")
+
+        # with Ice.initialize(sys.argv, "config.sub") as ice_storm_communicator:
+        #     # IceStorm
+        #     topicName = "LibraryUpdates"
+        #     manager = IceStorm.TopicManagerPrx.checkedCast(ice_storm_communicator.propertyToProxy('TopicManager.Proxy'))
+        #     if not manager:
+        #         print("invalid proxy")
+        #         sys.exit(1)
+        #
+        #     try:
+        #         topic = manager.retrieve(topicName)
+        #     except IceStorm.NoSuchTopic as e:
+        #         try:
+        #             topic = manager.create(topicName)
+        #         except IceStorm.TopicExists as ex:
+        #             print(sys.argv[0] + ": temporary error. try again")
+        #             sys.exit(1)
+        #
+        #     adapter = ice_storm_communicator.createObjectAdapter("Clock.Subscriber")
+        #
+        #     subId = Ice.Identity()
+        #     subId.name = ""
+        #     if len(subId.name) == 0:
+        #         subId.name = Ice.generateUUID()
+        #     subscriber = adapter.add(SoupI(), subId)
+        #
+        #     adapter.activate()
+        #     qos = {}
+        #     subscriber = subscriber.ice_oneway()
+        #
+        #     try:
+        #         topic.subscribeAndGetPublisher(qos, subscriber)
+        #     except IceStorm.AlreadySubscribed:
+        #         # This should never occur when subscribing with an UUID
+        #         assert(id)
+        #         print("reactivating persistent subscriber")
+        #
+        #     ice_storm_communicator.waitForShutdown()
+        #soup.libraryUpdate = SOUP.LibraryUpdatesPrx.uncheckedCast(publisher)
 
         communicator.waitForShutdown()

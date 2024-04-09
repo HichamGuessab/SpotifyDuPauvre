@@ -227,9 +227,9 @@ async function main() {
         const communicator = Ice.initialize(initialization_data);
 
         // Création d'un proxy vers l'interface soup
-        const proxySpotifyDuPauvre = communicator.stringToProxy("soup:default -p 10000").ice_twoway().ice_secure(false);
+        const proxySpotifyDuPauvre = communicator.stringToProxy("soup:default -p 10010").ice_twoway().ice_secure(false);
         // Création d'un proxy vers l'interface hello
-        const proxyHello = communicator.stringToProxy("hello:default -p 10000").ice_twoway().ice_secure(false);
+        const proxyHello = communicator.stringToProxy("hello:default -p 10010").ice_twoway().ice_secure(false);
 
         // Cast des proxys en interfaces
         const twoway1 = await SOUP.HelloPrx.checkedCast(proxyHello);
@@ -241,14 +241,14 @@ async function main() {
         }
 
         // Création d'un proxy vers l'interface LibraryUpdates
-        const libraryAdapter = await communicator.createObjectAdapterWithEndpoints("LibraryUpdatesAdapter", "default -p 10002");
-        const libraryUpdates = new LibraryUpdatesI();
-        const proxy = libraryAdapter.addWithUUID(libraryUpdates);
+        // const libraryAdapter = await communicator.createObjectAdapterWithEndpoints("LibraryUpdatesAdapter", "default -p 10002");
+        // const libraryUpdates = new LibraryUpdatesI();
+        // const proxy = libraryAdapter.addWithUUID(libraryUpdates);
 
         // const proxyLibraryUpdates = communicator.stringToProxy("LibraryUpdates:default -p 10001").ice_twoway().ice_secure(false);
         // const twoway3 = await SOUP.LibraryUpdatesPrx.checkedCast(proxyLibraryUpdates);
-        await libraryAdapter.activate();
-        await SOUP.subscribeUpdates(SOUP.LibraryUpdatesPrx.uncheckedCast(proxy));
+        // await libraryAdapter.activate();
+        // await SOUP.subscribeUpdates(SOUP.LibraryUpdatesPrx.uncheckedCast(proxy));
 
         // Affichage du menu et gestion des choix de l'utilisateur
         await displayMenu();
