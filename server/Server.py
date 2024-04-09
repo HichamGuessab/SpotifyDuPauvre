@@ -1,4 +1,5 @@
 from time import sleep
+import threading
 
 import Ice
 import IceStorm
@@ -18,8 +19,10 @@ MONGO_URI = os.getenv('MONGO_URI')
 DATABASE = os.getenv('DATABASE')
 COLLECTION = os.getenv('COLLECTION')
 
-global MONPOTE
 MONPOTE = None
+
+def updateLibrary():
+    MONPOTE.libraryUpdated('soup', 'Library has been updateeeeed.')
 
 class HelloI(SOUP.Hello):
     def helloWorld(self, current=None):
@@ -42,7 +45,6 @@ class SoupI(SOUP.SpotifyDuPauvre):
         StreamingPortManager.release_streaming_port(self.streaming_port)
 
     def researchMusicByTitle(self, title, current):
-        global MONPOTE
         regex = re.compile(title, re.IGNORECASE)
         metadata = [
             {
@@ -59,8 +61,8 @@ class SoupI(SOUP.SpotifyDuPauvre):
                  and "album" in song["metadata"]
                  and "genre" in song["metadata"]
         ]
-        print("C MON POTE", MONPOTE)
         MONPOTE.libraryUpdated('soup', 'The song has been found.')
+        print("C MON POTE", MONPOTE)
         return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
 
     def researchMusicByArtist(self, artist, current):
@@ -213,6 +215,29 @@ class StreamingPortManager:
         else:
             raise Exception(f"Attempted to release a port ({port}) that was not allocated.")
 
+def ice_storm_thread():
+    with Ice.initialize(sys.argv, "config.pub") as communicator2:
+        topicName = "ping"
+        manager = IceStorm.TopicManagerPrx.checkedCast(communicator2.propertyToProxy('TopicManager.Proxy'))
+        if not manager:
+            print("invalid proxy")
+            return
+
+        try:
+            topic = manager.retrieve(topicName)
+        except IceStorm.NoSuchTopic:
+            try:
+                topic = manager.create(topicName)
+            except IceStorm.TopicExists:
+                print("Topic already exists")
+                return
+
+        publisher = topic.getPublisher()
+        global MONPOTE
+        MONPOTE = SOUP.LibraryUpdatesPrx.uncheckedCast(publisher)
+        updateLibrary()
+
+        communicator2.waitForShutdown()
 
 if __name__ == '__main__':
     properties = Ice.createProperties()
@@ -222,29 +247,10 @@ if __name__ == '__main__':
     initialization_data = Ice.InitializationData()
     initialization_data.properties = properties
 
+    thread = threading.Thread(target=ice_storm_thread)
+    thread.start()
+
     with Ice.initialize(sys.argv, initialization_data) as communicator:
-        topicName = "ping"
-
-        with Ice.initialize(sys.argv, "config.pub") as communicator2:
-            manager = IceStorm.TopicManagerPrx.checkedCast(communicator2.propertyToProxy('TopicManager.Proxy'))
-            if not manager:
-                print("invalid proxy")
-                sys.exit(1)
-
-            try:
-                topic = manager.retrieve(topicName)
-            except IceStorm.NoSuchTopic:
-                try:
-                    topic = manager.create(topicName)
-                except IceStorm.TopicExists:
-                    print("mes couilles au bord de l'eau")
-                    sys.exit(1)
-
-            publisher = topic.getPublisher()
-            MONPOTE = SOUP.LibraryUpdatesPrx.uncheckedCast(publisher)
-
-            MONPOTE.libraryUpdated('soup', 'Library has been updateeeeed.')
-
         # Création d'un objet de type "ObjectAdapter" avec pour nom "HelloAdapter" et pour endpoint "default -h localhost -p 10000"
         adapter = communicator.createObjectAdapterWithEndpoints("SOUP", "default -h localhost -p 10010")
 
