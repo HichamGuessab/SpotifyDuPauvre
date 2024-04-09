@@ -6,8 +6,8 @@ const readline = require('readline').createInterface({
     output: process.stdout
 });
 
-class LibraryUpdatesI {
-    libraryUpdated(action, data) {
+class LibraryUpdatesI extends Ice.Object {
+    libraryUpdated(action, data, current) {
         console.log("Received notification");  // Add this line
         console.log(`Library updated: ${action} - ${data}`);
     }
@@ -241,10 +241,14 @@ async function main() {
         }
 
         // Création d'un proxy vers l'interface LibraryUpdates
+        const libraryAdapter = await communicator.createObjectAdapterWithEndpoints("LibraryUpdatesAdapter", "default -p 10002");
         const libraryUpdates = new LibraryUpdatesI();
-        const proxyLibraryUpdates = communicator.stringToProxy("LibraryUpdates:default -p 10001").ice_twoway().ice_secure(false);
-        const twoway3 = await SOUP.LibraryUpdatesPrx.checkedCast(proxyLibraryUpdates);
-        twoway2.subscribeUpdates(twoway3);
+        const proxy = libraryAdapter.addWithUUID(libraryUpdates);
+
+        // const proxyLibraryUpdates = communicator.stringToProxy("LibraryUpdates:default -p 10001").ice_twoway().ice_secure(false);
+        // const twoway3 = await SOUP.LibraryUpdatesPrx.checkedCast(proxyLibraryUpdates);
+        await libraryAdapter.activate();
+        await SOUP.subscribeUpdates(SOUP.LibraryUpdatesPrx.uncheckedCast(proxy));
 
         // Affichage du menu et gestion des choix de l'utilisateur
         await displayMenu();
