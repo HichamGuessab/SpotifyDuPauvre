@@ -13,6 +13,10 @@ module SOUP
     sequence<byte> ByteSeq;
     sequence<MetaData> ObjectArray;
 
+    interface LibraryUpdates {
+        void libraryUpdated(string action, string data);
+    };
+
     interface SpotifyDuPauvre {
         ObjectArray researchMusicByTitle(string title);
         ObjectArray researchMusicByArtist(string artist);
@@ -25,5 +29,8 @@ module SOUP
         string pauseMusic();
         string resumeMusic();
         string stopMusic();
+
+        idempotent void subscribeUpdates(LibraryUpdates* subscriber);
+        idempotent void unsubscribeUpdates(LibraryUpdates* subscriber);
     };
 };

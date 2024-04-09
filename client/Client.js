@@ -6,6 +6,13 @@ const readline = require('readline').createInterface({
     output: process.stdout
 });
 
+class LibraryUpdatesI {
+    libraryUpdated(action, data) {
+        console.log("Received notification");  // Add this line
+        console.log(`Library updated: ${action} - ${data}`);
+    }
+}
+
 async function displayMenu() {
     console.log("\n*** Spotify Du Pauvre ***");
     console.log("1. Add Music");
@@ -233,12 +240,19 @@ async function main() {
             throw new Error("Invalid proxy");
         }
 
+        // Création d'un proxy vers l'interface LibraryUpdates
+        const libraryUpdates = new LibraryUpdatesI();
+        const proxyLibraryUpdates = communicator.stringToProxy("LibraryUpdates:default -p 10001").ice_twoway().ice_secure(false);
+        const twoway3 = await SOUP.LibraryUpdatesPrx.checkedCast(proxyLibraryUpdates);
+        twoway2.subscribeUpdates(twoway3);
+
         // Affichage du menu et gestion des choix de l'utilisateur
         await displayMenu();
         await handleUserInput(twoway2);
 
         process.on('SIGINT', function() {
             console.log("Exiting...");
+            twoway2.unsubscribeUpdates(twoway3);
             communicator.destroy();
             process.exit();
         });

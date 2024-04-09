@@ -18,6 +18,7 @@ COLLECTION = os.getenv('COLLECTION')
 
 class HelloI(SOUP.Hello):
     def helloWorld(self, current=None):
+        self.notifySubscribers("Someone is HelloWording!")
         print(f"Hello World!")
 
 
@@ -30,6 +31,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
         self.player = self.vlc_instance.media_player_new()
         self.streaming_port = StreamingPortManager.allocate_streaming_port()
         self.streaming_url = f"http://localhost:{self.streaming_port}/stream"
+        self.subscribers = set()
 
     def __del__(self):
         StreamingPortManager.release_streaming_port(self.streaming_port)
@@ -51,6 +53,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
                  and "album" in song["metadata"]
                  and "genre" in song["metadata"]
         ]
+        self.notifySubscribers("Research by title", title)
         return [SOUP.MetaData(title=metadata["title"], artist=metadata["artist"]) for metadata in metadata]
 
     def researchMusicByArtist(self, artist, current):
@@ -89,6 +92,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
                 }
             )
             response = "The song " + title + " from " + artist + " has been added."
+            self.notifySubscribers("Added song ", title + " by " + artist)
         return response
 
     def deleteMusic(self, title, artist, current):
@@ -97,6 +101,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
         else:
             self.collection.delete_one({"metadata.title": title, "metadata.artist": artist})
             response = "The song " + title + " from " + artist + " has been deleted."
+        self.notifySubscribers("Deleted file", title + " by " + artist)
         return response
 
     def editMusic(self, title, artist, newTitle, newAlbum, newGenre, current):
@@ -116,6 +121,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
                 }
             )
             response = "The song " + title + " from " + artist + " has been updated : " + newTitle + " from album " + newAlbum + " in " + newGenre + " genre."
+            self.notifySubscribers("Edited file", title + " by " + artist)
         return response
 
     def playMusic(self, title, artist, current):
@@ -148,6 +154,7 @@ class SoupI(SOUP.SpotifyDuPauvre):
 
     def pauseMusic(self, current):
         self.player.pause()
+        self.notifySubscribers("Pause", "none")
         return "The song has been paused."
 
     def resumeMusic(self, current):
@@ -158,8 +165,26 @@ class SoupI(SOUP.SpotifyDuPauvre):
         if self.player.is_playing():
             self.player.stop()
         StreamingPortManager.release_streaming_port(self.streaming_port)
+        self.notifySubscribers("Add song", self.streaming_url)
         return "The song has been stopped."
 
+    def notifySubscribers(self, action, data):
+        for subscriber in self.subscribers:
+            try:
+                print(f"Sending notification: {action} - {data}")
+                subscriber.libraryUpdated(action, data)
+            except Ice.Exception as e:
+                print(f"Erreur lors de la notification de l'abonné : {e}")
+
+    def subscribeUpdates(self, subscriber, current):
+        print("Nouvel abonné")
+        self.subscribers.add(subscriber)
+        print(self.subscribers)
+
+    def unsubscribeUpdates(self, subscriber, current):
+        print("Abonné supprimé")
+        self.subscribers.discard(subscriber)
+        print(self.subscribers)
 
 class StreamingPortManager:
     MIN_PORT = 9581
